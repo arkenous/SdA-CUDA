@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <fstream>
 #include "Data.h"
 #include "Data_me.h"
 #include "Data_other.h"
@@ -49,9 +50,13 @@ int main() {
   stackedDenoisingAutoencoder.learn(train, num_sda_layer,
                                     sda_compression_rate, dropout_rate);
 
-  vector<double> result = stackedDenoisingAutoencoder.out(me[3]);
-  for(unsigned long i = 0, size = result.size(); i < size; ++i) {
-    cout << result[i] << endl;
+  for (unsigned long i = 0, size = me.size(); i < size; ++i) {
+    vector<double> result = stackedDenoisingAutoencoder.out(me[i]);
+    std::ofstream output_stream;
+    output_stream.open("me_"+std::to_string(i)+".dat", std::ios::out);
+    for (unsigned long j = 0, data_size = result.size(); j < data_size; ++j) {
+      output_stream << result[j] << endl;
+    }
   }
 
   return 0;
