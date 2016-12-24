@@ -8,6 +8,7 @@
 #include "StackedDenoisingAutoencoder.h"
 #include "Normalize.h"
 #include "AddNoise.h"
+#include "CosSimilarity.h"
 
 using std::vector;
 using std::string;
@@ -50,12 +51,26 @@ int main() {
   stackedDenoisingAutoencoder.learn(train, num_sda_layer,
                                     sda_compression_rate, dropout_rate);
 
+  CosSimilarity cosSimilarity;
+  vector<vector<double>> me_result;
+  vector<vector<double>> other_result;
+  me_result.resize(me.size());
+  other_result.resize(other.size());
+
   for (unsigned long i = 0, size = me.size(); i < size; ++i) {
-    vector<double> result = stackedDenoisingAutoencoder.out(me[i]);
-    std::ofstream output_stream;
-    output_stream.open("me_"+std::to_string(i)+".dat", std::ios::out);
-    for (unsigned long j = 0, data_size = result.size(); j < data_size; ++j) {
-      output_stream << result[j] << endl;
+    me_result[i] = stackedDenoisingAutoencoder.out(me[i]);
+  }
+
+  for (unsigned long i = 0, size = other.size(); i < size; ++i) {
+    other_result[i] = stackedDenoisingAutoencoder.out(other[i]);
+  }
+
+  for (int i = 0; i < 3; ++i) {
+    for (unsigned long j = 1, size = me.size(); j < size; ++j) {
+      cout << "me["+std::to_string(i)+"] me["+std::to_string(j)+"]: " << cosSimilarity.cos_similarity(me[i], me[j]) << endl;
+    }
+    for (unsigned long j = 0, size = other.size(); j < size; ++j) {
+      cout << "me["+std::to_string(i)+"] other["+std::to_string(j)+"]: " << cosSimilarity.cos_similarity(me[i], other[j]) << endl;
     }
   }
 
