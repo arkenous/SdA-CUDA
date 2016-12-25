@@ -33,18 +33,29 @@ private:
 
   vector<vector<Neuron>> sda_neurons;
   vector<vector<double>> sda_out;
+  vector<vector<double>> sda_learned_out;
   Neuron output_neuron;
   double o;
+  double learned_o;
 
   vector<thread> threads;
   vector<double> in;
   vector<double> ans;
 
+  void sdaFirstLayerForwardThread(const int begin, const int end);
+  void sdaOtherLayerForwardThread(const int layer, const int begin, const int end);
+  void outForwardThread(const int begin, const int end);
 
   void sdaFirstLayerOutThread(const int begin, const int end);
   void sdaOtherLayerOutThread(const int layer, const int begin, const int end);
   void outOutThread(const int begin, const int end);
+
   void outLearnThread(const int begin, const int end);
+
+  void sdaLastLayerLearnThread(const int begin, const int end);
+  void sdaMiddleLayerLearnThread(const int layer, const int begin, const int end);
+  void sdaFirstLayerLearnThread(const int begin, const int end);
+
   double crossEntropy(const double output, const double answer);
 };
 
