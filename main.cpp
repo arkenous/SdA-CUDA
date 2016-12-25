@@ -48,30 +48,23 @@ int main() {
   train.push_back(me[2]);
 
   StackedDenoisingAutoencoder stackedDenoisingAutoencoder;
-  stackedDenoisingAutoencoder.learn(train, num_sda_layer,
+  stackedDenoisingAutoencoder.build(train, num_sda_layer,
                                     sda_compression_rate, dropout_rate);
 
-  CosSimilarity cosSimilarity;
-  vector<vector<double>> me_result;
-  vector<vector<double>> other_result;
-  me_result.resize(me.size());
-  other_result.resize(other.size());
+  train.push_back(noised[0]);
+  train.push_back(noised[1]);
+  train.push_back(noised[2]);
 
+  stackedDenoisingAutoencoder.learn(train, answer, dropout_rate);
+
+  cout << "-----   Success   -----" << endl;
   for (unsigned long i = 0, size = me.size(); i < size; ++i) {
-    me_result[i] = stackedDenoisingAutoencoder.out(me[i]);
+    cout << stackedDenoisingAutoencoder.out(me[i]) << endl;
   }
 
+  cout << "-----   Fail   -----" << endl;
   for (unsigned long i = 0, size = other.size(); i < size; ++i) {
-    other_result[i] = stackedDenoisingAutoencoder.out(other[i]);
-  }
-
-  for (int i = 0; i < 3; ++i) {
-    for (unsigned long j = 1, size = me.size(); j < size; ++j) {
-      cout << "me["+std::to_string(i)+"] me["+std::to_string(j)+"]: " << cosSimilarity.cos_similarity(me[i], me[j]) << endl;
-    }
-    for (unsigned long j = 0, size = other.size(); j < size; ++j) {
-      cout << "me["+std::to_string(i)+"] other["+std::to_string(j)+"]: " << cosSimilarity.cos_similarity(me[i], other[j]) << endl;
-    }
+    cout << stackedDenoisingAutoencoder.out(other[i]) << endl;
   }
 
   return 0;
