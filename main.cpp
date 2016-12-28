@@ -21,7 +21,7 @@ using std::shuffle;
 int main() {
   double dropout_rate = 0.5;
   unsigned long num_sda_layer = 1;
-  float sda_compression_rate = 0.3;
+  float sda_compression_rate = 0.2;
   cout << dropout_rate << " " << num_sda_layer << " " << sda_compression_rate << endl;
 
   random_device rnd;
