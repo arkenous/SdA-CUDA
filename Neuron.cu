@@ -30,7 +30,7 @@ struct learn_m_functor {
   }
 
   __host__ __device__ double operator()(const double& m, const double& inputValue) const {
-    return beta_one * m + (1 - beta_one) * (delta * inputValue);
+    return beta_one * m + (1.0 - beta_one) * (delta * inputValue);
   }
 };
 
@@ -45,7 +45,7 @@ struct learn_nu_functor {
   }
 
   __host__ __device__ double operator()(const double& nu, const double& inputValue) const {
-    return beta_two * nu + (1 - beta_two) * pow((delta * inputValue), 2);
+    return beta_two * nu + (1.0 - beta_two) * pow((delta * inputValue), 2);
   }
 };
 
@@ -66,7 +66,7 @@ struct learn_functor {
   }
 
   __host__ __device__ double operator()(const double& m, const double& nu) {
-    return alpha * ((m / (1 - pow(beta_one, iteration))) / (sqrt(nu / (1 - pow(beta_two, iteration))) + epsilon));
+    return alpha * ((m / (1.0 - pow(beta_one, iteration))) / (sqrt(nu / (1.0 - pow(beta_two, iteration))) + epsilon));
   }
 };
 
@@ -79,7 +79,7 @@ struct output_functor {
   }
 
   __host__ __device__ double operator()(const double& inputValue, const double& weight) const {
-    return inputValue * (weight * (1.0 - dropout_rate));
+    return inputValue * weight;
   }
 };
 
@@ -178,7 +178,7 @@ void Neuron::learn(const double delta, const vector<double> &inputValues) {
     thrust::copy(d_inputWeights.begin(), d_inputWeights.end(), h_inputWeights.begin());
 
     // 確率的勾配降下でバイアスを更新
-    this->bias -= (this->alpha * this->delta) - (this->alpha * this->rambda * this->bias);
+    this->bias -= this->alpha * this->delta;
   }
 }
 
@@ -188,7 +188,7 @@ void Neuron::learn(const double delta, const vector<double> &inputValues) {
  * @return ニューロンの出力値（活性化関数より得られた値）
  */
 double Neuron::output(const vector<double> &inputValues) {
-  double sum = this->bias * (1.0 - this->dropout_rate);
+  double sum = this->bias;
 
   d_inputValues = inputValues;
 
@@ -198,12 +198,21 @@ double Neuron::output(const vector<double> &inputValues) {
   sum += thrust::reduce(d_output_result.begin(), d_output_result.end());
 
   double activated;
-  if (activation_type == 0) activated = activation_identity(sum);
-  else if (activation_type == 1) activated = activation_sigmoid(sum);
-  else if (activation_type == 2) activated = activation_tanh(sum);
-  else activated = activation_relu(sum);
+  switch(activation_type) {
+    case 0:
+      activated = activation_identity(sum);
+      break;
+    case 1:
+      activated = activation_sigmoid(sum);
+      break;
+    case 2:
+      activated = activation_tanh(sum);
+      break;
+    default:
+      activated = activation_relu(sum);
+  }
 
-  return activated;
+  return activated * (1.0 - this->dropout_rate);
 }
 
 /**
@@ -224,10 +233,19 @@ double Neuron::learn_output(const vector<double> &inputValues) {
 
   // 得られた重み付き和を活性化関数に入れて出力を得る
   double activated;
-  if (activation_type == 0) activated = activation_identity(sum);
-  else if (activation_type == 1) activated = activation_sigmoid(sum);
-  else if (activation_type == 2) activated = activation_tanh(sum);
-  else activated = activation_relu(sum);
+  switch(activation_type) {
+    case 0:
+      activated = activation_identity(sum);
+      break;
+    case 1:
+      activated = activation_sigmoid(sum);
+      break;
+    case 2:
+      activated = activation_tanh(sum);
+      break;
+    default:
+      activated = activation_relu(sum);
+  }
 
   return activated * this->dropout_mask;
 }

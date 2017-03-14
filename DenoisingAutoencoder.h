@@ -22,15 +22,15 @@ public:
   unsigned long getCurrentMiddleNeuronNum();
 
 private:
-  static const unsigned int MAX_TRIAL = 300; // 学習上限回数
-  constexpr static const double MAX_GAP = 0.1; // 許容する誤差
-  unsigned long num_thread = (unsigned long)sysconf(_SC_NPROCESSORS_ONLN);
+  static const unsigned int MAX_TRIAL = 200; // 学習上限回数
+  constexpr static const double MAX_GAP = 1.0; // 許容する誤差
+  unsigned long num_thread = (unsigned long)sysconf(_SC_NPROCESSORS_ONLN) - 1;
 
   unsigned long input_neuron_num;
   unsigned long middle_neuron_num;
   unsigned long output_neuron_num;
 
-  int middle_layer_type = 0; // 中間層の活性化関数の種類指定：0: identity, 1: sigmoid, 2: tanh, 3: ReLU
+  int middle_layer_type = 1; // 中間層の活性化関数の種類指定：0: identity, 1: sigmoid, 2: tanh, 3: ReLU
 
   bool successFlg = true;
 

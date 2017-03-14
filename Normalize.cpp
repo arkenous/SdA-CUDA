@@ -1,5 +1,6 @@
 
 #include <cmath>
+#include <algorithm>
 #include <iostream>
 #include "Normalize.h"
 
@@ -24,4 +25,14 @@ void normalize(vector<double> *input) {
   // 正規化し，得たデータで上書きする
   for (int data = 0; data < input_size; ++data)
     (*input)[data] = ((*input)[data] - avg) / standard_deviation;
+}
+
+void zero_one_normalize(vector<double> *input) {
+  unsigned long input_size = (*input).size(), i = 0;
+  double max = *std::max_element((*input).begin(), (*input).end());
+  double min = *std::min_element((*input).begin(), (*input).end());
+
+  for (i = 0; i < input_size; ++i) {
+    (*input)[i] = ((*input)[i] - min) / (max - min);
+  }
 }

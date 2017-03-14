@@ -7,5 +7,6 @@
 using namespace std;
 
 void normalize(vector<double> *input);
+void zero_one_normalize(vector<double> *input);
 
 #endif //SDA_CUDA_NORMALIZE_H

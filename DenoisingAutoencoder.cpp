@@ -34,7 +34,7 @@ DenoisingAutoencoder::DenoisingAutoencoder(const unsigned long num_input,
   output_neurons.resize(output_neuron_num);
   for (int neuron = 0; neuron < output_neuron_num; ++neuron) {
     output_neurons[neuron] = Neuron(middle_neuron_num, emptyVector, emptyVector, emptyVector,
-                                    0, 0.0, 0, dropout_rate);
+                                    0, 0.0, 0, 0.0);
   }
 
   h.resize(middle_neuron_num);
@@ -53,10 +53,13 @@ vector<Neuron> DenoisingAutoencoder::learn(const vector<vector<double>> &input,
   mt19937 mt;
   mt.seed(rnd());
   uniform_real_distribution<double> real_rnd(0.0, 1.0);
+  unsigned long charge;
+  int neuron = 0, i = 0, j = 0;
+  unsigned long input_size = input.size();
 
   for (int trial = 0; trial < MAX_TRIAL; ++trial) {
     cout << "-----   trial: " << trial << "   -----" << endl;
-    
+
     //region Dropoutを設定する
     for (int neuron = 0; neuron < middle_neuron_num; ++neuron)
       middle_neurons[neuron].dropout(real_rnd(mt));
@@ -67,71 +70,100 @@ vector<Neuron> DenoisingAutoencoder::learn(const vector<vector<double>> &input,
     //endregion
 
     // 使用する教師データを選択
-    in = noisy_input[trial % input.size()];
-    ans = input[trial % input.size()];
+    in = noisy_input[trial % input_size];
+    ans = input[trial % input_size];
 
     //region Feed Forward
-    unsigned long charge;
+    //TODO 以降を変更する
     threads.clear();
-    if (middle_neuron_num <= num_thread) charge = 1;
-    else charge = middle_neuron_num / num_thread;
-    for (int i = 0; i < middle_neuron_num; i += charge)
-      if (i != 0 && middle_neuron_num / i == 1)
-        threads.push_back(thread(&DenoisingAutoencoder::middleForwardThread, this,
-                                      i, middle_neuron_num));
-      else
-        threads.push_back(thread(&DenoisingAutoencoder::middleForwardThread, this,
-                                      i, i + charge));
-    for (thread &th : threads) th.join();
+    if (middle_neuron_num <= num_thread) {
+      for (i = 0; i < middle_neuron_num; ++i)
+        threads[i] = thread(&DenoisingAutoencoder::middleForwardThread, this,
+                                        i, i + 1);
+      for (i = 0; i < middle_neuron_num; ++i)
+        threads[i].join();
+    } else {
+      charge = middle_neuron_num / num_thread;
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        if (j == num_thread - 1)
+          threads[j] = thread(&DenoisingAutoencoder::middleForwardThread, this,
+                                        i, middle_neuron_num);
+        else
+          threads[j] = thread(&DenoisingAutoencoder::middleForwardThread, this,
+                                        i, i + charge);
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        threads[j].join();
+    }
 
     threads.clear();
-    if (output_neuron_num <= num_thread) charge = 1;
-    else charge = output_neuron_num / num_thread;
-    for (int i = 0; i < output_neuron_num; i += charge)
-      if (i != 0 && output_neuron_num / i == 1)
-        threads.push_back(thread(&DenoisingAutoencoder::outForwardThread, this,
-                                      i, output_neuron_num));
-      else
-        threads.push_back(thread(&DenoisingAutoencoder::outForwardThread, this,
-                                      i, i + charge));
-    for (thread &th : threads) th.join();
-    
+    if (output_neuron_num <= num_thread) {
+      for (i = 0; i < output_neuron_num; ++i)
+        threads[i] = thread(&DenoisingAutoencoder::outForwardThread, this,
+                                        i, i + 1);
+      for (i = 0; i < output_neuron_num; ++i)
+        threads[i].join();
+    } else {
+      charge = output_neuron_num / num_thread;
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        if (j == num_thread - 1)
+          threads[j] = thread(&DenoisingAutoencoder::outForwardThread, this,
+                                        i, output_neuron_num);
+        else
+          threads[j] = thread(&DenoisingAutoencoder::outForwardThread, this,
+                                        i, i + charge);
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        threads[j].join();
+    }
     //endregion
 
     successFlg = true;
 
     //region Back Propagation (learn phase)
     threads.clear();
-    if (output_neuron_num <= num_thread) charge = 1;
-    else charge = output_neuron_num / num_thread;
-    for (int i = 0; i < output_neuron_num; i += charge)
-      if (i != 0 && output_neuron_num / i == 1)
-        threads.push_back(thread(&DenoisingAutoencoder::outLearnThread, this,
-                                      i, output_neuron_num));
-      else
-        threads.push_back(thread(&DenoisingAutoencoder::outLearnThread, this,
-                                      i, i + charge));
-    for (thread &th : threads) th.join();
+    if (output_neuron_num <= num_thread) {
+      for (i = 0; i < output_neuron_num; ++i)
+        threads[i] = thread(&DenoisingAutoencoder::outLearnThread, this,
+                                        i, i + 1);
+      for (i = 0; i < output_neuron_num; ++i)
+        threads[i].join();
+    } else {
+      charge = output_neuron_num / num_thread;
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        if (j == num_thread - 1)
+          threads[j] = thread(&DenoisingAutoencoder::outLearnThread, this,
+                                        i, output_neuron_num);
+        else
+          threads[j] = thread(&DenoisingAutoencoder::outLearnThread, this,
+                                        i, i + charge);
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        threads[j].join();
+    }
 
     if (successFlg) {
-      succeed++;
-      if (succeed >= input.size()) break;
+      ++succeed;
+      if (succeed >= input_size) break;
       else continue;
     } else succeed = 0;
 
     threads.clear();
-    if (middle_neuron_num <= num_thread) charge = 1;
-    else charge = middle_neuron_num / num_thread;
-    for (int i = 0; i < middle_neuron_num; i += charge)
-      if (i != 0 && middle_neuron_num / i == 1)
-        threads.push_back(thread(&DenoisingAutoencoder::middleLearnThread, this,
-                                      i, middle_neuron_num));
-      else
-        threads.push_back(thread(&DenoisingAutoencoder::middleLearnThread, this,
-                                      i, i + charge));
-    for (thread &th : threads) th.join();
-    
-    
+    if (middle_neuron_num <= num_thread) {
+      for (i = 0; i < middle_neuron_num; ++i)
+        threads[i] = thread(&DenoisingAutoencoder::middleLearnThread, this,
+                                        i, i + 1);
+      for (i = 0; i < middle_neuron_num; ++i)
+        threads[i].join();
+    } else {
+      charge = middle_neuron_num / num_thread;
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        if (j == num_thread - 1)
+          threads[j] = thread(&DenoisingAutoencoder::middleLearnThread, this,
+                                        i, middle_neuron_num);
+        else
+          threads[j] = thread(&DenoisingAutoencoder::middleLearnThread, this,
+                                        i, i + charge);
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        threads[j].join();
+    }
   }
 
   // 全ての教師データで正解を出すか，収束限度回数を超えた場合に終了
@@ -145,21 +177,30 @@ DenoisingAutoencoder::getMiddleOutput(const vector<vector<double>> &noisy_input)
   vector<vector<double>> middle_output(noisy_input.size(), vector<double>(middle_neuron_num, 0.0));
 
   unsigned long charge;
+  int i = 0, j = 0;
 
   for (unsigned long set = 0, set_size = noisy_input.size(); set < set_size; ++set) {
     in = noisy_input[set];
 
     threads.clear();
-    if (middle_neuron_num <= num_thread) charge = 1;
-    else charge = middle_neuron_num / num_thread;
-    for (int i = 0; i < middle_neuron_num; i += charge)
-      if (i != 0 && middle_neuron_num / i == 1)
-        threads.push_back(thread(&DenoisingAutoencoder::middleOutThread, this,
-                                      i, middle_neuron_num));
-      else
-        threads.push_back(thread(&DenoisingAutoencoder::middleOutThread, this,
-                                      i, i + charge));
-    for (thread &th : threads) th.join();
+    if (middle_neuron_num <= num_thread) {
+      for (i = 0; i < middle_neuron_num; ++i)
+        threads[i] = thread(&DenoisingAutoencoder::middleOutThread, this,
+                                        i, i + 1);
+      for (i = 0; i < middle_neuron_num; ++i)
+        threads[i].join();
+    } else {
+      charge = middle_neuron_num / num_thread;
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        if (j == num_thread - 1)
+          threads[j] = thread(&DenoisingAutoencoder::middleOutThread, this,
+                                        i, middle_neuron_num);
+        else
+          threads[j] = thread(&DenoisingAutoencoder::middleOutThread, this,
+                                        i, i + charge);
+      for (i = 0, j = 0; j < num_thread; i += charge, ++j)
+        threads[j].join();
+    }
     middle_output[set] = learnedH;
   }
 
@@ -205,13 +246,19 @@ void DenoisingAutoencoder::middleLearnThread(const int begin, const int end) {
     }
 
     double delta;
-    if (middle_layer_type == 0) delta = 1.0 * sumDelta;
-    else if (middle_layer_type == 1) delta = (h[neuron] * (1.0 - h[neuron])) * sumDelta;
-    else if (middle_layer_type == 2) delta = (1.0 - pow(h[neuron], 2)) * sumDelta;
-    else {
-      //ReLU
-      if (h[neuron] > 0) delta = 1.0 * sumDelta;
-      else delta = 0 * sumDelta;
+    switch (middle_layer_type) {
+      case 0:
+        delta = 1.0 * sumDelta;
+        break;
+      case 1:
+        delta = (h[neuron] * (1.0 - h[neuron])) * sumDelta;
+        break;
+      case 2:
+        delta = (1.0 - pow(h[neuron], 2)) * sumDelta;
+        break;
+      default:
+        if (h[neuron] > 0) delta = 1.0 * sumDelta;
+        else delta = 0.0 * sumDelta;
     }
 
     // 学習
@@ -234,5 +281,5 @@ unsigned long DenoisingAutoencoder::getCurrentMiddleNeuronNum() {
 }
 
 double DenoisingAutoencoder::mean_squared_error(const double output, const double answer) {
-  return (output - answer) * (output - answer) / 2;
+  return (output - answer) * (output - answer) / 2.0;
 }
